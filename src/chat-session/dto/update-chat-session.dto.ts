@@ -1,4 +1,7 @@
-import { PartialType } from "@nestjs/mapped-types";
-import { CreateChatSessionDto } from "./create-chat-session.dto";
+import { IsOptional, IsString } from "class-validator";
 
-export class UpdateChatSessionDto extends PartialType(CreateChatSessionDto) {}
+export class UpdateChatSessionDto {
+  @IsOptional()
+  @IsString()
+  title?: string;
+}

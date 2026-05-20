@@ -1,6 +1,15 @@
-import { PartialType } from "@nestjs/mapped-types";
-import { CreateEmergencyContactDto } from "./create-emergency-contact.dto";
+import { IsOptional, IsString } from "class-validator";
 
-export class UpdateEmergencyContactDto extends PartialType(
-  CreateEmergencyContactDto,
-) {}
+export class UpdateEmergencyContactDto {
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @IsOptional()
+  @IsString()
+  relation?: string;
+}

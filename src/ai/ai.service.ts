@@ -1,6 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import OpenAI from "openai";
 import { PromptBuilderService } from "./prompt-builder.service";
 import { RuleAnalysis } from "../rule-engine/rule-engine.service";
 import { ConversationMemory } from "./conversation-memory.service";
@@ -22,10 +21,25 @@ export class AiService {
     private readonly promptBuilder: PromptBuilderService,
   ) {}
 
-  private createProviderClient(): OpenAI {
+  private createProviderClient(): any {
     const apiKey = this.configService.get<string>("GROQ_API_KEY");
     if (!apiKey) {
       throw new Error("GROQ_API_KEY is required for AI generation.");
+    }
+
+    let OpenAI: any;
+    try {
+      // Use runtime require so TypeScript does not fail if the module is missing in a deployment environment.
+      // The service already falls back to a safe response when GROQ_API_KEY is missing.
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const OpenAIModule = require("openai");
+      OpenAI = OpenAIModule?.default ?? OpenAIModule;
+    } catch (error) {
+      this.logger.error(
+        "OpenAI module could not be loaded. Ensure openai is installed in the deployment environment.",
+        error,
+      );
+      throw new Error("OpenAI provider module is unavailable.");
     }
 
     switch (this.providerName) {
@@ -158,7 +172,7 @@ export class AiService {
   }
 
   private async performProviderRequest(
-    client: OpenAI,
+    client: any,
     request: any,
     systemPrompt: string,
     userPrompt: string,

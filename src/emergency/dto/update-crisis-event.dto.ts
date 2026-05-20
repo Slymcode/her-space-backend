@@ -1,4 +1,15 @@
-import { PartialType } from "@nestjs/mapped-types";
-import { CreateCrisisEventDto } from "./create-crisis-event.dto";
+import { IsOptional, IsString, IsBoolean } from "class-validator";
 
-export class UpdateCrisisEventDto extends PartialType(CreateCrisisEventDto) {}
+export class UpdateCrisisEventDto {
+  @IsOptional()
+  @IsString()
+  message?: string;
+
+  @IsOptional()
+  @IsString()
+  severity?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  resolved?: boolean;
+}
