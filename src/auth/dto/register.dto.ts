@@ -24,6 +24,14 @@ export class RegisterDto {
   @Type(() => Number)
   @IsInt()
   @Min(10)
-  @Max(120)
+  @Max(19)
   age!: number;
+
+  @IsString()
+  @IsNotEmpty()
+  country!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  preferredLanguage!: string;
 }

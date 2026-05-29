@@ -31,6 +31,7 @@ export class ChatService {
       include: { profile: true },
     });
     const profileName = user?.profile?.fullName ?? undefined;
+    const age = user?.profile?.age ?? null;
 
     // Run orchestration to get AI reply and detect crisis
     const recentMessages = (await this.getLatestMessages(userId, 20)).reverse();
@@ -44,6 +45,8 @@ export class ChatService {
         profileName,
         createDto.content,
         recent,
+        age,
+        user?.profile?.country ?? null,
       );
     } catch (err) {
       aiResult = null;

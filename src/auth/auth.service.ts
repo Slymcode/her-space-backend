@@ -29,6 +29,8 @@ export class AuthService {
     password,
     fullName,
     age,
+    country,
+    preferredLanguage,
   }: RegisterDto): Promise<AuthResponse> {
     const existingUser = await this.usersService.findByEmail(email);
     if (existingUser) {
@@ -40,6 +42,8 @@ export class AuthService {
       password,
       fullName,
       age,
+      country,
+      preferredLanguage,
     );
     const accessToken = this.jwtService.sign({
       sub: user.id,

@@ -23,6 +23,14 @@ export interface RuleAnalysis {
   safeOverrideResponse?: string;
 }
 
+const EMERGENCY_CONTACTS: Record<string, string[]> = {
+  nigeria: ["0800 110 200", "0800 005 555"],
+  ghana: ["0302 772 568", "0302 777 222"],
+  kenya: ["1193", "+254 722 762 762"],
+  cameroon: ["1515", "+237 222 22 93 96"],
+  "south africa": ["0800 456 789", "0800 12 13 14"],
+};
+
 const CRISIS_PATTERNS: RegExp[] = [
   /\bkill (?:myself|me)\b/i,
   /\bend (?:my|it all)\b/i,
@@ -66,9 +74,15 @@ const CULTURAL_TRIGGERS: Record<string, RegExp> = {
 
 @Injectable()
 export class RuleEngineService {
-  analyzeMood(mood: string, score: number, note?: string): RuleAnalysis {
+  analyzeMood(
+    mood: string,
+    score: number,
+    note?: string,
+    age?: number | null,
+    country?: string | null,
+  ): RuleAnalysis {
     const text = [mood, note ?? ""].join(" ");
-    const analysis = this.analyzeText(text);
+    const analysis = this.analyzeText(text, age, country);
     const intensitySeverity: Severity =
       score <= 2 ? "moderate" : score <= 4 ? "low" : analysis.severity;
 
@@ -85,16 +99,18 @@ export class RuleEngineService {
   analyzeJournalEntry(
     title: string | null | undefined,
     content: string,
+    age?: number | null,
+    country?: string | null,
   ): RuleAnalysis {
     const text = [title ?? "", content].join(" ");
-    return this.analyzeText(text);
+    return this.analyzeText(text, age, country);
   }
 
-  analyzeChatMessage(message: string, age?: number | null): RuleAnalysis {
-    return this.analyzeText(message, age);
+  analyzeChatMessage(message: string, age?: number | null, country?: string | null): RuleAnalysis {
+    return this.analyzeText(message, age, country);
   }
 
-  private analyzeText(text: string, age?: number | null): RuleAnalysis {
+  private analyzeText(text: string, age?: number | null, country?: string | null): RuleAnalysis {
     const normalized = text.trim();
     const triggers = Object.entries(CULTURAL_TRIGGERS)
       .filter(([_, re]) => re.test(normalized))
@@ -108,7 +124,10 @@ export class RuleEngineService {
         isCrisis: true,
         triggers,
         ageBand: this.getAgeBand(age),
-        safeOverrideResponse: this.getCrisisMessage(this.getAgeBand(age)),
+        safeOverrideResponse: this.getCrisisMessage(
+          this.getAgeBand(age),
+          country,
+        ),
       };
     }
 
@@ -151,16 +170,34 @@ export class RuleEngineService {
     return "17-19";
   }
 
-  private getCrisisMessage(ageBand: AgeBand): string {
+  private getCrisisMessage(ageBand: AgeBand, country?: string | null): string {
     const baseMessage =
       ageBand === "10-13"
         ? "I'm really glad you told me how you feel. You matter so much. What you're feeling is heavy, and you don't have to carry it alone."
         : "Thank you for trusting me with this. What you're feeling is real and it's serious — and you deserve safe, caring support right now.";
 
+    const emergencyInfo = this.getCountryEmergencyInfo(country);
+
     return `${baseMessage}
 
 Please reach out to someone you trust today — a parent, aunt, teacher, school counselor, religious leader, or older sibling — and tell them what you told me.
 
-If you are in immediate danger or thinking of hurting yourself, please call a helpline right now. I'm here with you.`;
+If you are in immediate danger or thinking of hurting yourself, please call a helpline right now.${emergencyInfo}`;
+  }
+
+  private getCountryEmergencyInfo(country?: string | null): string {
+    if (!country) {
+      return " If you are outside the listed countries, call your local emergency number or trusted support immediately.";
+    }
+
+    const normalizedCountry = country.trim().toLowerCase();
+    const contacts = EMERGENCY_CONTACTS[normalizedCountry];
+
+    if (!contacts || contacts.length === 0) {
+      return " If you are outside the listed countries, call your local emergency number or trusted support immediately.";
+    }
+
+    const formatted = contacts.join(" or ");
+    return ` In ${country.trim()}, you can call ${formatted} for urgent help.`;
   }
 }

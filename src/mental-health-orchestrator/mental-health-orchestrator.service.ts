@@ -31,11 +31,15 @@ export class MentalHealthOrchestratorService {
     mood: string,
     score: number,
     note?: string | null,
+    age?: number | null,
+    country?: string | null,
   ): Promise<OrchestrationResult> {
     const analysis = this.ruleEngine.analyzeMood(
       mood,
       score,
       note ?? undefined,
+      age,
+      country,
     );
     const recommendations =
       this.recommendations.generateRecommendations(analysis);
@@ -66,8 +70,15 @@ export class MentalHealthOrchestratorService {
     profileName: string | undefined,
     title: string | null | undefined,
     content: string,
+    age?: number | null,
+    country?: string | null,
   ): Promise<OrchestrationResult> {
-    const analysis = this.ruleEngine.analyzeJournalEntry(title, content);
+    const analysis = this.ruleEngine.analyzeJournalEntry(
+      title,
+      content,
+      age,
+      country,
+    );
     const recommendations =
       this.recommendations.generateRecommendations(analysis);
     const crisis = await this.crisisDetection.detectAndRecord(
@@ -96,8 +107,10 @@ export class MentalHealthOrchestratorService {
     profileName: string | undefined,
     message: string,
     recentConversation: string,
+    age?: number | null,
+    country?: string | null,
   ): Promise<OrchestrationResult> {
-    const analysis = this.ruleEngine.analyzeChatMessage(message);
+    const analysis = this.ruleEngine.analyzeChatMessage(message, age, country);
     const recommendations =
       this.recommendations.generateRecommendations(analysis);
     const crisis = await this.crisisDetection.detectAndRecord(

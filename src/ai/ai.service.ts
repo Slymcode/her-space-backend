@@ -1,8 +1,10 @@
-import { Injectable, Logger } from "@nestjs/common";
+﻿import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PromptBuilderService } from "./prompt-builder.service";
 import { RuleAnalysis } from "../rule-engine/rule-engine.service";
 import { ConversationMemory } from "./conversation-memory.service";
+import OpenAI from "openai";
+// import { GoogleGenAI } from "@google/genai";
 
 interface AiResponse {
   response: string;
@@ -12,42 +14,49 @@ interface AiResponse {
 @Injectable()
 export class AiService {
   private readonly logger = new Logger(AiService.name);
-  private readonly providerName =
-    this.configService.get<string>("AI_PROVIDER")?.toLowerCase() || "groq";
+  private readonly providerName: string;
   private readonly groqBaseUrl = "https://api.groq.com/openai/v1";
+  private openai?: OpenAI;
+  // private gemini?: GoogleGenAI;
 
   constructor(
     private readonly configService: ConfigService,
     private readonly promptBuilder: PromptBuilderService,
-  ) {}
+  ) {
+    this.providerName = (
+      this.configService.get<string>("AI_PROVIDER") ||
+      this.configService.get<string>("USEAI") ||
+      "openai"
+    ).toLowerCase();
 
-  private createProviderClient(): any {
-    const apiKey = this.configService.get<string>("GROQ_API_KEY");
-    if (!apiKey) {
-      throw new Error("GROQ_API_KEY is required for AI generation.");
+    if (this.providerName === "openai") {
+      const apiKey = this.configService.get<string>("OPENAI_API_KEY");
+      const baseURL = this.configService.get<string>("OPENAI_BASE_URL");
+      if (!apiKey) {
+        this.logger.warn("OPENAI_API_KEY is missing; OpenAI provider will not be initialized.");
+      } else {
+        this.openai = new OpenAI({ apiKey, baseURL });
+      }
+    } else if (this.providerName === "groq") {
+      const apiKey = this.configService.get<string>("GROQ_API_KEY");
+      const baseURL =
+        this.configService.get<string>("GROQ_BASE_URL") || this.groqBaseUrl;
+      if (!apiKey) {
+        this.logger.warn("GROQ_API_KEY is missing; Groq provider will not be initialized.");
+      } else {
+        this.openai = new OpenAI({ apiKey, baseURL });
+      }
     }
-
-    let OpenAI: any;
-    try {
-      // Use runtime require so TypeScript does not fail if the module is missing in a deployment environment.
-      // The service already falls back to a safe response when GROQ_API_KEY is missing.
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const OpenAIModule = require("openai");
-      OpenAI = OpenAIModule?.default ?? OpenAIModule;
-    } catch (error) {
-      this.logger.error(
-        "OpenAI module could not be loaded. Ensure openai is installed in the deployment environment.",
-        error,
-      );
-      throw new Error("OpenAI provider module is unavailable.");
-    }
-
-    switch (this.providerName) {
-      case "groq":
-        return new OpenAI({ apiKey, baseURL: this.groqBaseUrl });
-      default:
-        throw new Error(`Unsupported AI_PROVIDER: ${this.providerName}`);
-    }
+    // else if (this.providerName === "gemini") {
+    //   const apiKey = this.configService.get<string>("GEMINI_API_KEY");
+    //   const baseURL = this.configService.get<string>("GEMINI_BASE_URL");
+    //   const apiVersion = this.configService.get<string>("GEMINI_API_VERSION") || "v1";
+    //   if (!apiKey) {
+    //     this.logger.warn("GEMINI_API_KEY is missing; Gemini provider will not be initialized.");
+    //   } else {
+    //     this.gemini = new GoogleGenAI({ apiKey, baseURL, apiVersion });
+    //   }
+    // }
   }
 
   async generateMoodInsight(
@@ -108,114 +117,68 @@ export class AiService {
     return this.generateResponse("chat", systemPrompt, userPrompt, analysis);
   }
 
+  private getProviderModel(): string {
+    if (this.providerName === "groq") {
+      return this.configService.get<string>("GROQ_MODEL") || "llama-3.1-8b-instant";
+    }
+    return this.configService.get<string>("OPENAI_MODEL") || "gpt-4o-mini";
+  }
+
   private async generateResponse(
     type: "mood" | "journal" | "chat",
     systemPrompt: string,
     userPrompt: string,
     analysis: RuleAnalysis,
   ): Promise<AiResponse> {
-    const apiKey = this.configService.get<string>("GROQ_API_KEY");
-    if (!apiKey) {
-      this.logger.warn("Missing GROQ_API_KEY; using fallback response.");
-      return {
-        safe: true,
-        response: this.getFallbackResponse(type, analysis, true),
-      };
-    }
-
-    const client = this.createProviderClient();
-    const model =
-      this.configService.get<string>("GROQ_MODEL") || "llama3-70b-8192";
-
-    const messages = [
-      {
-        role: "system",
-        content: systemPrompt,
-      },
-      {
-        role: "user",
-        content: userPrompt,
-      },
-    ];
-
-    const request = {
-      model,
-      messages,
-      temperature: 0.7,
-      top_p: 0.95,
-      max_tokens: 450,
-    } as any;
-
-    const content = await this.performProviderRequest(
-      client,
-      request,
-      systemPrompt,
-      userPrompt,
-    );
-
-    if (typeof content !== "string" || !content.trim()) {
-      return {
-        safe: true,
-        response: this.getFallbackResponse(type, analysis, true),
-      };
-    }
-
-    const cleaned = this.sanitizeResponse(content);
-    const validated = this.validateAiOutput(cleaned);
-    return {
-      safe: validated.safe,
-      response: validated.safe
-        ? cleaned
-        : (validated.replacement ??
-          this.getFallbackResponse(type, analysis, true)),
-    };
-  }
-
-  private async performProviderRequest(
-    client: any,
-    request: any,
-    systemPrompt: string,
-    userPrompt: string,
-  ): Promise<string | null> {
-    try {
-      const completion = await client.chat.completions.create(request);
-      return completion.choices?.[0]?.message?.content ?? null;
-    } catch (firstError) {
-      this.logger.warn(`Chat completion request failed: ${firstError}`);
+    const provider = this.providerName;
+    if (provider === "openai" || provider === "groq") {
+      if (!this.openai) {
+        this.logger.warn(`${provider} provider not initialized; using fallback response.`);
+        return {
+          safe: true,
+          response: this.getFallbackResponse(type, analysis, true),
+        };
+      }
       try {
-        const response = (await client.responses.create({
-          model: request.model,
-          input: [
+        const response = await this.openai.chat.completions.create({
+          model: this.getProviderModel(),
+          messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
           ],
-          temperature: request.temperature,
-          top_p: request.top_p,
-          max_output_tokens: request.max_tokens,
-        })) as any;
-
-        const output = response.output?.[0] as any;
-        if (!output) return null;
-        if (typeof output === "string") return output;
-
-        const content = output?.content;
-        if (Array.isArray(content) && content.length) {
-          const firstPiece = content[0] as any;
-          if (typeof firstPiece === "string") return firstPiece;
-          if (typeof firstPiece?.text === "string") return firstPiece.text;
-          if (typeof firstPiece?.message?.content === "string")
-            return firstPiece.message.content;
+          temperature: 0.7,
+          top_p: 0.95,
+          max_tokens: type === "chat" ? 280 : 450,
+        });
+        const content = response.choices[0]?.message?.content;
+        if (!content || !content.trim()) {
+          return {
+            safe: true,
+            response: this.getFallbackResponse(type, analysis, true),
+          };
         }
-
-        if (typeof output?.text === "string") return output.text;
-        if (typeof output?.message?.content === "string")
-          return output.message.content;
-        return null;
-      } catch (secondError) {
-        this.logger.warn(`Responses API fallback failed: ${secondError}`);
-        return null;
+        const cleaned = this.sanitizeResponse(content);
+        const validated = this.validateAiOutput(cleaned);
+        return {
+          safe: validated.safe,
+          response: validated.safe
+            ? cleaned
+            : (validated.replacement ??
+              this.getFallbackResponse(type, analysis, true)),
+        };
+      } catch (error) {
+        this.logger.warn(`${provider} chat completion failed: ${error}`);
+        return {
+          safe: true,
+          response: this.getFallbackResponse(type, analysis, true),
+        };
       }
     }
+    this.logger.warn(`Unknown or unimplemented AI provider: ${provider}. Using fallback response.`);
+    return {
+      safe: true,
+      response: this.getFallbackResponse(type, analysis, true),
+    };
   }
 
   private getFallbackResponse(
@@ -224,7 +187,7 @@ export class AiService {
     isError: boolean = false,
   ) {
     if (analysis.isCrisis) {
-      return `I’m sorry, I’m not able to process that safely right now. If you feel unsafe, please tell a trusted adult or call a local helpline.`;
+      return `IΓÇÖm sorry, IΓÇÖm not able to process that safely right now. If you feel unsafe, please tell a trusted adult or call a local helpline.`;
     }
 
     if (isError) {
@@ -232,9 +195,9 @@ export class AiService {
     }
 
     const fallbackPhrases = [
-      "That sounds really heavy, and I’m here with you.",
+      "That sounds really heavy, and IΓÇÖm here with you.",
       "I hear how difficult this is for you.",
-      "It matters that you shared this. I’m listening.",
+      "It matters that you shared this. IΓÇÖm listening.",
     ];
     const base =
       fallbackPhrases[Math.floor(Math.random() * fallbackPhrases.length)];
@@ -256,7 +219,7 @@ export class AiService {
     const forbidden = [
       /\b(kill yourself|hurt yourself|harm yourself)\b/i,
       /\bdiagnos(?:e|is|ed)\b/i,
-      /\byou (?:have|are) (?:depressed|bipolar|schizophren)/i,
+      /\byou (?:have|are) (?:depressed|bipolar|schizophren)\b/i,
       /\b(?:take|use) (?:drugs|pills|medication)\b/i,
     ];
 
@@ -265,7 +228,7 @@ export class AiService {
         return {
           safe: false,
           replacement:
-            "I want to be careful with what I share here. Your feelings matter so much. Please talk to a trusted adult — a parent, aunt, teacher, or counselor — about what's going on. I'm here to listen too.",
+            "I want to be careful with what I share here. Your feelings matter so much. Please talk to a trusted adult ΓÇö a parent, aunt, teacher, or counselor ΓÇö about what's going on. I'm here to listen too.",
         };
       }
     }
@@ -274,6 +237,20 @@ export class AiService {
   }
 
   private sanitizeResponse(value: string) {
-    return value.trim();
+    let cleaned = value.trim();
+
+    // Remove common generated explanation prefixes that are not part of the final assistant message.
+    cleaned = cleaned.replace(/^(here(?:'s| is) a\s+warm, supportive response[^\n]*:\s*)/i, "");
+    cleaned = cleaned.replace(/^(here(?:'s| is) a\s+supportive assistant message[^\n]*:\s*)/i, "");
+    cleaned = cleaned.replace(/^(here(?:'s| is) a\s+warm, supportive response that (?:follows|feels) [^\n]*:\s*)/i, "");
+    cleaned = cleaned.replace(/^(here(?:'s| is) a\s+supportive assistant message that [^\n]*:\s*)/i, "");
+    cleaned = cleaned.replace(/^(here(?:'s| is) a\s+supportive response [^\n]*:\s*)/i, "");
+
+    const quotedMatch = cleaned.match(/["“”](.+)["“”]$/s);
+    if (quotedMatch && quotedMatch[1]?.trim()) {
+      cleaned = quotedMatch[1].trim();
+    }
+
+    return cleaned;
   }
 }

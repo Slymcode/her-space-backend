@@ -11,6 +11,8 @@ export class UsersService {
     password: string,
     fullName: string,
     age: number,
+    country: string,
+    preferredLanguage: string,
   ) {
     const passwordHash = await hash(password, 10);
 
@@ -22,6 +24,8 @@ export class UsersService {
           create: {
             fullName,
             age,
+            country,
+            preferredLanguage,
             onboarded: false,
             emotionalGoals: [],
             stressTriggers: [],

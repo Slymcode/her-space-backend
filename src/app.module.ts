@@ -5,6 +5,7 @@ import { UsersModule } from "./users/users.module";
 import { MoodModule } from "./mood/mood.module";
 import { JournalModule } from "./journal/journal.module";
 import { ChatModule } from "./chat/chat.module";
+import { EmergencyModule } from "./emergency/emergency.module";
 import { PrismaModule } from "./prisma/prisma.module";
 
 @Module({
@@ -16,6 +17,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     MoodModule,
     JournalModule,
     ChatModule,
+    EmergencyModule,
   ],
 })
 export class AppModule {}

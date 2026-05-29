@@ -31,6 +31,7 @@ export class MoodService {
       include: { profile: true },
     });
     const profileName = user?.profile?.fullName ?? undefined;
+    const age = user?.profile?.age ?? null;
 
     let orchestration = null as any;
     try {
@@ -40,6 +41,8 @@ export class MoodService {
         createMoodEntryDto.mood,
         createMoodEntryDto.score,
         createMoodEntryDto.note,
+        age,
+        user?.profile?.country ?? null,
       );
     } catch (err) {
       // Orchestration failures should not block saving the mood entry

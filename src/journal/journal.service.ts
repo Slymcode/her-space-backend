@@ -32,6 +32,7 @@ export class JournalService {
       include: { profile: true },
     });
     const profileName = user?.profile?.fullName ?? undefined;
+    const age = user?.profile?.age ?? null;
     let orchestration = null as any;
     try {
       orchestration = await this.orchestrator.orchestrateJournalEntry(
@@ -39,6 +40,8 @@ export class JournalService {
         profileName,
         createDto.title,
         createDto.content,
+        age,
+        user?.profile?.country ?? null,
       );
     } catch (err) {
       // swallow
