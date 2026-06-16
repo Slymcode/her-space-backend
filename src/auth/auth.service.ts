@@ -27,7 +27,8 @@ export class AuthService {
   async register({
     email,
     password,
-    fullName,
+    firstName,
+    lastName,
     age,
     country,
     preferredLanguage,
@@ -40,7 +41,8 @@ export class AuthService {
     const user = await this.usersService.createUser(
       email,
       password,
-      fullName,
+      firstName,
+      lastName,
       age,
       country,
       preferredLanguage,

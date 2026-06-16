@@ -9,7 +9,8 @@ export class UsersService {
   async createUser(
     email: string,
     password: string,
-    fullName: string,
+    firstName: string,
+    lastName: string,
     age: number,
     country: string,
     preferredLanguage: string,
@@ -22,7 +23,8 @@ export class UsersService {
         passwordHash,
         profile: {
           create: {
-            fullName,
+            firstName,
+            lastName,
             age,
             country,
             preferredLanguage,
@@ -70,7 +72,8 @@ export class UsersService {
   async updateProfile(
     userId: string,
     data: {
-      fullName?: string;
+      firstName?: string;
+      lastName?: string;
       age?: number;
       pronouns?: string;
       country?: string;
@@ -83,7 +86,8 @@ export class UsersService {
     return this.prisma.profile.update({
       where: { userId },
       data: {
-        fullName: data.fullName,
+        firstName: data.firstName,
+        lastName: data.lastName,
         age: data.age,
         pronouns: data.pronouns,
         country: data.country,

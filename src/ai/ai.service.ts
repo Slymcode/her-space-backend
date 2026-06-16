@@ -33,7 +33,9 @@ export class AiService {
       const apiKey = this.configService.get<string>("OPENAI_API_KEY");
       const baseURL = this.configService.get<string>("OPENAI_BASE_URL");
       if (!apiKey) {
-        this.logger.warn("OPENAI_API_KEY is missing; OpenAI provider will not be initialized.");
+        this.logger.warn(
+          "OPENAI_API_KEY is missing; OpenAI provider will not be initialized.",
+        );
       } else {
         this.openai = new OpenAI({ apiKey, baseURL });
       }
@@ -42,7 +44,9 @@ export class AiService {
       const baseURL =
         this.configService.get<string>("GROQ_BASE_URL") || this.groqBaseUrl;
       if (!apiKey) {
-        this.logger.warn("GROQ_API_KEY is missing; Groq provider will not be initialized.");
+        this.logger.warn(
+          "GROQ_API_KEY is missing; Groq provider will not be initialized.",
+        );
       } else {
         this.openai = new OpenAI({ apiKey, baseURL });
       }
@@ -119,7 +123,9 @@ export class AiService {
 
   private getProviderModel(): string {
     if (this.providerName === "groq") {
-      return this.configService.get<string>("GROQ_MODEL") || "llama-3.1-8b-instant";
+      return (
+        this.configService.get<string>("GROQ_MODEL") || "llama-3.1-8b-instant"
+      );
     }
     return this.configService.get<string>("OPENAI_MODEL") || "gpt-4o-mini";
   }
@@ -133,7 +139,9 @@ export class AiService {
     const provider = this.providerName;
     if (provider === "openai" || provider === "groq") {
       if (!this.openai) {
-        this.logger.warn(`${provider} provider not initialized; using fallback response.`);
+        this.logger.warn(
+          `${provider} provider not initialized; using fallback response.`,
+        );
         return {
           safe: true,
           response: this.getFallbackResponse(type, analysis, true),
@@ -174,7 +182,9 @@ export class AiService {
         };
       }
     }
-    this.logger.warn(`Unknown or unimplemented AI provider: ${provider}. Using fallback response.`);
+    this.logger.warn(
+      `Unknown or unimplemented AI provider: ${provider}. Using fallback response.`,
+    );
     return {
       safe: true,
       response: this.getFallbackResponse(type, analysis, true),
@@ -240,11 +250,26 @@ export class AiService {
     let cleaned = value.trim();
 
     // Remove common generated explanation prefixes that are not part of the final assistant message.
-    cleaned = cleaned.replace(/^(here(?:'s| is) a\s+warm, supportive response[^\n]*:\s*)/i, "");
-    cleaned = cleaned.replace(/^(here(?:'s| is) a\s+supportive assistant message[^\n]*:\s*)/i, "");
-    cleaned = cleaned.replace(/^(here(?:'s| is) a\s+warm, supportive response that (?:follows|feels) [^\n]*:\s*)/i, "");
-    cleaned = cleaned.replace(/^(here(?:'s| is) a\s+supportive assistant message that [^\n]*:\s*)/i, "");
-    cleaned = cleaned.replace(/^(here(?:'s| is) a\s+supportive response [^\n]*:\s*)/i, "");
+    cleaned = cleaned.replace(
+      /^(here(?:'s| is) a\s+warm, supportive response[^\n]*:\s*)/i,
+      "",
+    );
+    cleaned = cleaned.replace(
+      /^(here(?:'s| is) a\s+supportive assistant message[^\n]*:\s*)/i,
+      "",
+    );
+    cleaned = cleaned.replace(
+      /^(here(?:'s| is) a\s+warm, supportive response that (?:follows|feels) [^\n]*:\s*)/i,
+      "",
+    );
+    cleaned = cleaned.replace(
+      /^(here(?:'s| is) a\s+supportive assistant message that [^\n]*:\s*)/i,
+      "",
+    );
+    cleaned = cleaned.replace(
+      /^(here(?:'s| is) a\s+supportive response [^\n]*:\s*)/i,
+      "",
+    );
 
     const quotedMatch = cleaned.match(/["“”](.+)["“”]$/s);
     if (quotedMatch && quotedMatch[1]?.trim()) {

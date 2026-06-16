@@ -26,7 +26,8 @@ model User {
 
 model Profile {
   userId            String   @id
-  fullName          String?
+  firstName         String?
+  lastName          String?
   age               Int?
   country           String?
   preferredLanguage String?  @default("en")

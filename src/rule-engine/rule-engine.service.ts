@@ -106,11 +106,19 @@ export class RuleEngineService {
     return this.analyzeText(text, age, country);
   }
 
-  analyzeChatMessage(message: string, age?: number | null, country?: string | null): RuleAnalysis {
+  analyzeChatMessage(
+    message: string,
+    age?: number | null,
+    country?: string | null,
+  ): RuleAnalysis {
     return this.analyzeText(message, age, country);
   }
 
-  private analyzeText(text: string, age?: number | null, country?: string | null): RuleAnalysis {
+  private analyzeText(
+    text: string,
+    age?: number | null,
+    country?: string | null,
+  ): RuleAnalysis {
     const normalized = text.trim();
     const triggers = Object.entries(CULTURAL_TRIGGERS)
       .filter(([_, re]) => re.test(normalized))

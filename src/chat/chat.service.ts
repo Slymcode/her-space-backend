@@ -30,7 +30,11 @@ export class ChatService {
       where: { id: userId },
       include: { profile: true },
     });
-    const profileName = user?.profile?.fullName ?? undefined;
+    const profileName = user?.profile
+      ? [(user.profile as any).firstName, (user.profile as any).lastName]
+          .filter(Boolean)
+          .join(" ") || undefined
+      : undefined;
     const age = user?.profile?.age ?? null;
 
     // Run orchestration to get AI reply and detect crisis

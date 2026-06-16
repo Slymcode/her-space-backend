@@ -27,7 +27,8 @@ Authorization: Bearer <accessToken>
 {
   "email": "user@example.com",
   "password": "securePassword123",
-  "fullName": "John Doe",
+  "firstName": "John",
+  "lastName": "Doe",
   "age": 25
 }
 ```
@@ -42,7 +43,8 @@ Authorization: Bearer <accessToken>
     "email": "user@example.com",
     "profile": {
       "userId": "uuid",
-      "fullName": "John Doe",
+      "firstName": "John",
+      "lastName": "Doe",
       "age": 25,
       "country": null,
       "preferredLanguage": "en",
@@ -140,7 +142,8 @@ Authorization: Bearer <accessToken>
 
 ```json
 {
-  "fullName": "Jane Doe",
+  "firstName": "Jane",
+  "lastName": "Doe",
   "age": 26,
   "country": "Kenya",
   "preferredLanguage": "sw",
@@ -156,7 +159,8 @@ Authorization: Bearer <accessToken>
 ```json
 {
   "userId": "uuid",
-  "fullName": "Jane Doe",
+  "firstName": "Jane",
+  "lastName": "Doe",
   "age": 26,
   "country": "Kenya",
   "preferredLanguage": "sw",
